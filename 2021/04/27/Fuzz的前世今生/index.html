@@ -14,7 +14,7 @@
 <meta property="og:description" content="Fuzzing 或者 fuzz testing，中文名为模糊测试，是一种著名的自动化漏洞挖掘技术。Fuzzing的核心是通过一定的框架自动地生成大量的测试用例，并使用这些测试用例测试目标程序，以期待能够检测到目标程序的非预期行为、软件缺陷或漏洞。 Fuzzing具有效率高、可扩展性强以及使用简单等优点，因此在工业界和学术界都引起了广泛的关注。从工业界来看，Google的AFL、Honggfuzz、">
 <meta property="og:locale" content="en_US">
 <meta property="article:published_time" content="2021-04-27T07:22:25.528Z">
-<meta property="article:modified_time" content="2021-04-27T12:14:12.694Z">
+<meta property="article:modified_time" content="2021-04-27T12:25:54.459Z">
 <meta property="article:author" content="John Doe">
 <meta name="twitter:card" content="summary">
   
@@ -102,7 +102,9 @@
 <li><p>1990——“An empirical study of the reliability of UNIX utilities”</p>
 <p>术语“fuzz”一词源自于威斯康星大学Barton Miller教授在1998年教授的课程（CS736）的课程项目，该项目通过随机地生成一些文件和命令行参数（喂给UNIX程序执行）、观测是否有crash产生，从而达到测试UNIX utilities的健壮性的目的。1990年，该项目的相关成果被总结成一篇文章：An empirical study of the reliability of UNIX utilities，术语“fuzz”正式亮相。(此时的fuzzing还是black-box fuzzing，即黑盒模糊测试)</p>
 </li>
-<li></li>
+<li><p>2008——Peach</p>
+<p>Fuzzing的重点是如何生成“好的”测试用例。“好的”直观上有以下两点理解：（1）测试用例符合目标程序的输入格式。例如，测试readelf时，提供合法的ELF文件；（2）测试用例能够触发程序的非预期行为。</p>
+</li>
 </ol>
 
       
