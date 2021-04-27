@@ -95,7 +95,7 @@
       
         <p>Fuzzing 或者 fuzz testing，中文名为模糊测试，是一种著名的自动化漏洞挖掘技术。Fuzzing的核心是通过一定的方式自动地生成大量的测试用例，并使用这些测试用例测试目标程序，以期待能够检测到目标程序的非预期行为、软件缺陷或漏洞。</p>
 <p>Fuzzing具有效率高、可扩展性强以及使用简单等优点，因此在工业界和学术界都引起了广泛的关注。从工业界来看，Google的AFL、Honggfuzz、libFuzzer是最著名的三大模糊测试器；从学术界来看，自2016年 AFLFast 一文在安全顶会CCS发表后，fuzzing相关的论文开始在四大安全顶会、软工顶会等发表，紧接着，一些B类会议上也出现了fuzzing的身影，而在当下，fuzzing相关的论文已经十分多了 （这个“多”，是相对于安全这个领域来说的）。</p>
-<p>本文主要是粗浅地总结一下fuzzing的发展，并浅谈自己对于fuzzing的理解。</p>
+<p>本文主要是粗浅地总结一下fuzzing的发展，并浅谈自己对于fuzzing的理解，有错的地方还望指正。</p>
 <h2 id="0x01-Fuzzing时间线"><a href="#0x01-Fuzzing时间线" class="headerlink" title="0x01 Fuzzing时间线"></a>0x01 Fuzzing时间线</h2><ol>
 <li><p>1990——<a target="_blank" rel="noopener" href="https://dl.acm.org/doi/10.1145/96267.96279">An empirical study of the reliability of UNIX utilities</a></p>
 <p>术语“fuzz”一词源自于威斯康星大学Barton Miller教授在1998年教授的课程（CS736）的课程项目，该项目通过随机地生成一些文件和命令行参数（喂给UNIX程序执行）、观测是否有crash产生，从而达到测试UNIX utilities的健壮性的目的。1990年，该项目的相关成果被总结成一篇文章：An empirical study of the reliability of UNIX utilities，术语“fuzz”正式亮相。(此时的fuzzing还是black-box fuzzing，即黑盒模糊测试)</p>
@@ -106,12 +106,22 @@
 <p>(1) <a target="_blank" rel="noopener" href="https://gitlab.com/peachtech/peach-fuzzer-community">https://gitlab.com/peachtech/peach-fuzzer-community</a>     </p>
 <p>(2) <a target="_blank" rel="noopener" href="https://blog.techorganic.com/2014/05/14/from-fuzzing-to-0-day/">https://blog.techorganic.com/2014/05/14/from-fuzzing-to-0-day/</a></p>
 </li>
+<li><p>2013——<a target="_blank" rel="noopener" href="https://lcamtuf.coredump.cx/afl/">AFL</a></p>
+<p>AFL是目前最最….最著名的fuzzer（模糊测试器），此外，我个人认为也是fuzzing发展的一个超级重要里程碑。AFL火爆到什么程度呢？首先，基于AFL挖出来的漏洞数绝对上千，其中包括qemu等著名软件的漏洞；此外，纵观从2016年至今的安全和软工顶会论文，有很多都是对AFL的扩展，例如AFLFast、AFLgo、FairFuzz、CollAFL、AFLsmart等等。我想，如果AFL发表成一篇论文的话，其引用量肯定巨大…</p>
+<p>AFL意味着什么，或者说AFL带来了什么？我觉得有以下几点：</p>
+<p>(1) AFL是grey-box fuzzing （灰盒模糊测试）的开端。灰盒模糊测试兼具白盒模糊测试和黑盒模糊测试的优点，其性能远超二者。并且，从某种意义上来说，提到fuzzing，大部分都是默指灰盒模糊测试。</p>
+<p>(2) AFL的各种机制非常好。AFL实现了很多机制，例如对目标程序进行的源码插桩、为了减少开销而采用的forkserver机制、各种详尽周到的突变策略等等。AFL的源码是非常值得一读的，纯读论文或者单纯使用AFL进行漏洞挖掘，总是不够的。</p>
+<p>(3) 简约美。AFL在实现过程中并没有用到复杂的算法之类，很多内容都是基于经验所得，例如AFL一系列的突变策略，但是AFL却取得了非常好的效果。</p>
+</li>
+<li><p>2013——至今</p>
+<p>现在的模糊测试器众多纷杂，研究者们都进行了很多努力，例如在模糊测试中引入符号执行或者污点分析。但是我觉得，这些模糊测试器，并没有超越AFL，AFL依旧是目前最好用、可扩展性最好、稳定性最好的模糊测试器。</p>
+</li>
 </ol>
-
+<h2 id="0x02-Fuzzing分类"><a href="#0x02-Fuzzing分类" class="headerlink" title="0x02 Fuzzing分类"></a>0x02 Fuzzing分类</h2>
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://lxumei.github.io/2021/04/27/Fuzz%E7%9A%84%E5%89%8D%E4%B8%96%E4%BB%8A%E7%94%9F/" data-id="cko020x2t0000a1fqcej5dc4u" data-title="Fuzzing的前世今生" class="article-share-link">Share</a>
+      <a data-url="https://lxumei.github.io/2021/04/27/Fuzz%E7%9A%84%E5%89%8D%E4%B8%96%E4%BB%8A%E7%94%9F/" data-id="cko0390060000fzfq3mxq187v" data-title="Fuzzing的前世今生" class="article-share-link">Share</a>
       
       
       
@@ -162,7 +172,7 @@
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://lxumei.github.io/2021/04/27/hello-world/" data-id="cko020x2z0001a1fqbfzw95q3" data-title="Hello World" class="article-share-link">Share</a>
+      <a data-url="https://lxumei.github.io/2021/04/27/hello-world/" data-id="cko03900b0001fzfq3gr9c68x" data-title="Hello World" class="article-share-link">Share</a>
       
       
       
