@@ -93,18 +93,24 @@
     
     <div class="e-content article-entry" itemprop="articleBody">
       
-        <p>AFL是目前最著名的fuzzer，本文主要简要介绍AFL的工作流程和实现原理。</p>
-<h2 id="0x00-AFL的工作流程"><a href="#0x00-AFL的工作流程" class="headerlink" title="0x00 AFL的工作流程"></a>0x00 AFL的工作流程</h2><p>AFL既可以测试开源软件，也可以借助qemu测试闭源软件，这里主要讨论测试开源软件的情况。</p>
+        <p>本文主要简要介绍<a target="_blank" rel="noopener" href="https://lcamtuf.coredump.cx/afl/">AFL</a>的工作流程和实现原理。AFL是一个典型的<font color=red>coverage-based</font> grey box fuzzer，对fuzzing的发展具有十分重大的意义。不过，在本文正式开始之前，我们首先来看一下什么是coverage-based？</p>
+<p>coverage-based，有的论文也称coverage-guided，coverage-based fuzzing通过扩大目标程序程序的代码覆盖率增加发现程序漏洞的机会。这种思路是比较直观的：如果能够执行到目标程序的每一个基本块、每一条边、每一条路径，那么发现漏洞的机率也会增大。因此，此类coverage-based fuzzer在生成测试用例时是以扩大目标程序代码覆盖率为目标的，并不是直接地以找漏洞为目标。</p>
+<h2 id="0x01-AFL的工作流程"><a href="#0x01-AFL的工作流程" class="headerlink" title="0x01 AFL的工作流程"></a>0x01 AFL的工作流程</h2><p>AFL既可以测试开源软件，也可以借助qemu测试闭源软件，这里主要讨论测试开源软件的情况。</p>
 <p>在测试开源软件时，AFL的输入包括两部分：目标程序源码和初始的测试用例（也叫initial seeds）；AFL的工作流程主要分为两部分：编译时插桩和正式的fuzzing过程。</p>
 <h3 id="编译时插桩和共享内存"><a href="#编译时插桩和共享内存" class="headerlink" title="编译时插桩和共享内存"></a>编译时插桩和共享内存</h3><p>在获得目标程序源码后，用户首先需要利用AFL提供的编译器afl-gcc对目标程序进行编译，并在汇编层面对目标程序进行插桩，得到一个插桩后的二进制文件，之后fuzzing过程中执行的将会是这个插桩后的二进制文件。</p>
 <p>编译时插入的桩代码将会在fuzzing过程中为fuzzer提供目标程序的代码覆盖信息，具体地说，是边覆盖信息。首先，桩代码会为目标程序的每一个<a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Basic_block">基本块</a>都随机分配一个id，并根据此计算每条边的id。假设基本块A的id为ID_A，基本块B的id为ID_B，那么A-&gt;B这条边的id为<font color=red>(ID_A &gt;&gt; 1)xor ID_B</font>，我们记为edge(A, B)，很明显edge(A, B)和edge(B, A)是不一样的，通过这种方式，AFL就能<font color=red>唯一地</font>标识目标程序中的每一条边。其次，桩代码还会统计每一条边的执行次数，并将其保存在<font color=red>共享内存shared_map</font>中。</p>
 <p>shared_map能够提供一个测试用例对于目标程序的边覆盖信息。在一个测试用例被执行前，shared_map会被重置；在执行该测试用例的过程中shared_map会被更新；当该测试用例执行完毕后，就会得到这个测试用例对应的shared_map。因此，shared_map能够表示目标程序执行某个测试用例后的边覆盖情况。</p>
 <p>关于AFL的代码覆盖统计，可能会有这样的疑问🤔️：为什么不记录完整的路径执行信息呢？我觉得是代价太高了，尤其是在有大量循环的时候，每增加一次循环都表示一条新的路径。论文<a target="_blank" rel="noopener" href="https://www.usenix.org/conference/raid2019/presentation/wang">Be Sensitive and Collaborative: Analyzing Impact of Coverage Metrics in Greybox Fuzzing</a>对不同代码覆盖率统计方式对于fuzzing的影响进行了研究。</p>
-<h3 id="Fuzzing过程"><a href="#Fuzzing过程" class="headerlink" title="Fuzzing过程"></a>Fuzzing过程</h3><p>AFL（1）首先使用用户提供的初始的测试用例初始化seed pool（种子池），（2）随后采用一定的seed selection strategy（种子选择策略）从种子池中选取一个测试用例，（3）紧接着，使用一定的mutation strategy（突变策略）突变选中的测试用例，进而生成一系列新的测试用例，（4）然后依次执行生成的新测试用例，（5）监视目标程序的执行。如果某个测试用例导致目标程序发生异常，那么将其加入crash set；否则根据shared_map判断测试用例是否引起新的代码覆盖，如果有，则认为该测试用例是“interesting”的，并将其加入seed pool，如果没有，则丢弃该测试用例，（6）返回（2）。注意，AFL不会自动停止fuzzing过程，需要用户手动停止。（注意，这个过程并不是百分之百和AFL的执行流程相同，例如AFL的一系列预处理过程这里都没有提及，这里只是整体介绍AFL的工作流程。此外，这个流程也适用于当下大部分的灰盒模糊测试）</p>
-<p>种子选择策略：它决定着在种子池中，选择哪个测试用例去突变。例如，选取长度小、执行时间短的测试用例进行突变。</p>
-<p>种子突变策略：它决定着种子的突变位置和具体的突变操作。例如AFL包含两个突变阶段：deterministic stage和havoc stage。</p>
-<p>种子的energy：它表示该种子生成的新测试用例的数目。</p>
-<p>interesting：如果一个测试用例使得目标程序的代码覆盖情况发生了变化（例如，该测试用例执行了一条新的边），则认为该测试用例是interesting的。</p>
+<h3 id="Fuzzing过程"><a href="#Fuzzing过程" class="headerlink" title="Fuzzing过程"></a>Fuzzing过程</h3><p>AFL的具体的fuzzing过程如下：<br>  （1）首先使用用户提供的初始的测试用例初始化seed pool（种子池），<br>  （2）随后采用一定的<font color=red>seed selection strategy</font>（种子选择策略）从种子池中选取一个测试用例，<br>  （3）紧接着，使用一定的<font color=red>mutation strategy</font>（突变策略）突变选中的测试用例，进而生成一系列新的测试用例，<br>  （4）然后依次执行生成的新测试用例，<br>  （5）监视目标程序的执行。如果某个测试用例导致目标程序发生异常，那么将其加入<font color=red>crash set</font>；否则根据shared_map判断测试用例是否引起新的代码覆盖，如果有，则认为该测试用例是“<font color=red>interesting</font>”的，并将其加入种子池，如果没有，则丢弃该测试用例，<br>  （6）返回（2）。<br>注意，AFL不会自动停止fuzzing过程，需要用户手动停止。此外，这个过程并不是百分之百和AFL的执行流程相同，例如AFL的一系列预处理过程这里都没有提及，这里只是整体介绍AFL的工作流程。此外，这个流程也适用于当下大部分的灰盒模糊测试。</p>
+<p>接下来，介绍一下fuzzing中常用的一些“术语”：<br>（1）seed selection strategy：种子选择策略，它决定着在种子池中，选择哪个测试用例去突变。例如，选取长度小、执行时间短的测试用例进行突变。 （有研究者也称seed selection strategy为seed schedule）<br>（2）mutation strategy：种子突变策略，它决定着种子的突变位置和具体的突变操作。例如AFL包含两个突变阶段：deterministic stage和havoc stage。<br>（3）energy：一个种子的energy表示该种子生成的新测试用例的数目。<br>（4）crash set：存储使目标程序发生异常的测试用例。<br>（5）interesting：如果一个测试用例使得目标程序的代码覆盖情况发生了变化（例如，该测试用例执行了一条新的边），则认为该测试用例是interesting的。    </p>
+<h2 id="0x02-Forkserver机制"><a href="#0x02-Forkserver机制" class="headerlink" title="0x02 Forkserver机制"></a>0x02 Forkserver机制</h2><p>AFL设计了一套forkserver机制使，可以避免频繁调用execve()，大幅度降低了fuzzing的时间开销。AFL的作者也有一篇博客专门记录了此事，详见链接：<a target="_blank" rel="noopener" href="https://lcamtuf.blogspot.com/2014/10/fuzzing-binaries-without-execve.html">https://lcamtuf.blogspot.com/2014/10/fuzzing-binaries-without-execve.html</a></p>
+<p>Fuzzer的一个重要任务是：将生成的每一个测试用例依次喂给目标程序执行，因此目标程序需要被执行很多次。一个简单的思路是将fuzzer进程作为父进程，当执行一个测试用例时，fuzzer进程首先创建一个子进程，在子进程内使用execve()执行目标程序，fuzzer进程通过waitpid()获取子进程的执行信息，判断子进程是否因为signal（例如，SIGSEGV, SIGABRT等）结束。</p>
+<p>不幸的是， 频繁地执行execve()会引起很大的时间开销：每一次执行execve()时，都需要将目标程序加载到内存，进行链接等操作，十分低效。🤔️ 那能不能只加载一次目标程序，只进行一次链接等操作呢？😄 答案是：可以的，相关的实现机制是forkserver。接下来，本文简要说明一下forkserver的基本思路，不涉及具体的代码。</p>
+<h3 id="编译时插桩"><a href="#编译时插桩" class="headerlink" title="编译时插桩"></a>编译时插桩</h3><p>AFL通过编译时插桩，在目标程序中插入了一段代码（注意：插入的位置必须是在测试用例被目标程序使用之前，例如，main()函数之前），这段代码的作用是按照fuzzer进程的指令行事。当fuzzer进程说“执行”，这段代码就调用fork()创建一个子进程（即，target进程），在target进程内，注入的代码会将控制权限交给目标程序本身，目标程序就能从main()开始执行；而父进程内会等待 target进程，并将target进程的进程ID通过管道发送给fuzzer进程。</p>
+<p>fork()这里利用到了<a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/628938/what-is-copy-on-write">copy-on-write</a>机制，得到的子进程和父进程在一开始是共享内存空间，直到子进程进行了写操作。利用copy-on-write机制的fork()十分高效。</p>
+<h3 id="进程之间的通信"><a href="#进程之间的通信" class="headerlink" title="进程之间的通信"></a>进程之间的通信</h3><p>AFL一共涉及到三个进程：AFL进程，forkserver进程和target进程。这三个进程之间的关系是：AFL进程创建了forkserver进程，forkserver进程创建了target进程。</p>
+<p>在fuzzing中，AFL进程会首先启动一个forkserver进程。forkserver进程的作用是：将插桩后的目标程序通过execve()加载到内存中并执行。因为插入的桩代码，目标程序并不会被执行，而是阻塞等待AFL进程的命令。当AFL进程发送命令说“执行”，forkserver进程就会通过fork()创建一个target进程，并开始真正地执行目标程序；而forkserver进程会将target进程的进程ID发给AFL进程，然后等待target进程结束。</p>
+<p>AFL进程和forkserver进程通过管道进行通信。AFL维护了两个管道，命令管道和状态管道：<br>（1）命令管道。AFL进程对命令管道进行写，而forkserver负责读取命令管道。AFL进程通过命令管道向forkserver发送命令。<br>（2）状态管道。AFL进程负责读状态管道，而forkserver负责写状态管道。AFL进程通过读取命令管道获取target进程的进程ID。</p>
 
       
     </div>
