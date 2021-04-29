@@ -71,10 +71,10 @@
       <div class="outer">
         <section id="main">
   
-    <article id="post-AFL剖析（一）" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+    <article id="post-AFL概述" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
   <div class="article-meta">
-    <a href="/2021/04/27/AFL%E5%89%96%E6%9E%90%EF%BC%88%E4%B8%80%EF%BC%89/" class="article-date">
-  <time class="dt-published" datetime="2021-04-27T07:22:25.528Z" itemprop="datePublished">2021-04-27</time>
+    <a href="/2021/04/28/AFL%E6%A6%82%E8%BF%B0/" class="article-date">
+  <time class="dt-published" datetime="2021-04-28T09:01:28.820Z" itemprop="datePublished">2021-04-28</time>
 </a>
     
   </div>
@@ -85,7 +85,7 @@
         
   
     <h1 itemprop="name">
-      <a class="p-name article-title" href="/2021/04/27/AFL%E5%89%96%E6%9E%90%EF%BC%88%E4%B8%80%EF%BC%89/">Fuzzing概述</a>
+      <a class="p-name article-title" href="/2021/04/28/AFL%E6%A6%82%E8%BF%B0/">AFL概述</a>
     </h1>
   
 
@@ -93,68 +93,23 @@
     
     <div class="e-content article-entry" itemprop="articleBody">
       
-        <p>Fuzzing 或者 fuzz testing，中文名为模糊测试，是一种著名的自动化漏洞挖掘技术。Fuzzing的核心是通过一定的方式自动地生成大量的测试用例，并使用这些测试用例测试目标程序，以期待能够检测到目标程序的非预期行为、软件缺陷或漏洞。</p>
-<p>Fuzzing具有效率高、可扩展性强以及使用简单等优点，因此在工业界和学术界都引起了广泛的关注。从工业界来看，Google的AFL、Honggfuzz、libFuzzer是最著名的三大模糊测试器；从学术界来看，自2016年 AFLFast 一文在安全顶会CCS发表后，fuzzing相关的论文开始在四大安全顶会、软工顶会等发表，紧接着，一些B类会议上也出现了fuzzing的身影，而在当下，fuzzing相关的论文已经十分多了 （这个“多”，是相对于安全这个领域来说的）。</p>
-<p>本文主要是粗浅地总结一下fuzzing的发展，并浅谈自己对于fuzzing的理解，有错的地方还望指正。</p>
-<h2 id="0x01-Fuzzing时间线"><a href="#0x01-Fuzzing时间线" class="headerlink" title="0x01 Fuzzing时间线"></a>0x01 Fuzzing时间线</h2><ol>
-<li><p>1990——<a target="_blank" rel="noopener" href="https://dl.acm.org/doi/10.1145/96267.96279">An empirical study of the reliability of UNIX utilities</a></p>
-<p>术语“fuzz”一词源自于威斯康星大学Barton Miller教授在1998年教授的课程（CS736）的课程项目，该项目通过随机地生成一些文件和命令行参数（喂给UNIX程序执行）、观测是否有crash产生，从而达到测试UNIX utilities的健壮性的目的。1990年，该项目的相关成果被总结成一篇文章：An empirical study of the reliability of UNIX utilities，术语“fuzz”正式亮相。(此时的fuzzing还是black-box fuzzing，即黑盒模糊测试)</p>
-</li>
-<li><p>2004——<a target="_blank" rel="noopener" href="https://gitlab.com/peachtech/peach-fuzzer-community">Peach</a></p>
-<p>Fuzzing的重点是如何生成“好的”测试用例。“好的”直观上有以下两点理解：（1）测试用例符合目标程序的输入格式。例如，测试readelf时，提供合法的ELF文件；（2）测试用例能够触发程序的非预期行为。Peach，能够在一定程度上解决（1）。Peach可以通过编写pit文件自定义数据格式，支持文件格式和网络协议等多种格式。具体使用方式还是参见Peach的主页。</p>
-<p>Peach相关的内容：      </p>
-<p>(1) <a target="_blank" rel="noopener" href="https://gitlab.com/peachtech/peach-fuzzer-community">https://gitlab.com/peachtech/peach-fuzzer-community</a>     </p>
-<p>(2) <a target="_blank" rel="noopener" href="https://blog.techorganic.com/2014/05/14/from-fuzzing-to-0-day/">https://blog.techorganic.com/2014/05/14/from-fuzzing-to-0-day/</a></p>
-</li>
-<li><p>2013——<a target="_blank" rel="noopener" href="https://lcamtuf.coredump.cx/afl/">AFL</a></p>
-<p>AFL是目前最最….最著名的fuzzer（模糊测试器），此外，我个人认为也是fuzzing发展的一个超级重要里程碑。AFL火爆到什么程度呢？首先，基于AFL挖出来的漏洞数绝对上千，其中包括qemu等著名软件的漏洞；此外，纵观从2016年至今的安全和软工顶会论文，有很多都是对AFL的扩展，例如AFLFast、AFLgo、FairFuzz、CollAFL、AFLsmart等等。我想，如果AFL发表成一篇论文的话，其引用量肯定巨大…</p>
-<p>AFL意味着什么，或者说AFL带来了什么？我觉得有以下几点：   </p>
-<p>(1) AFL是grey-box fuzzing （灰盒模糊测试）的开端。灰盒模糊测试兼具white-box fuzzing（白盒模糊测试）和black-box fuzzing（黑盒模糊测试）的优点，其性能远超二者。并且，从某种意义上来说，提到fuzzing，大部分都是默指灰盒模糊测试。    </p>
-<p>(2) AFL的各种机制非常好。AFL实现了很多机制，例如对目标程序进行的源码插桩、为了减少开销而采用的forkserver机制、各种详尽周到的突变策略等等。AFL的源码是非常值得一读的，纯读论文或者单纯使用AFL进行漏洞挖掘，总是不够的。     </p>
-<p>(3) 简约美。AFL在实现过程中并没有用到复杂的算法之类，很多内容都是基于经验所得，例如AFL一系列的突变策略，但是AFL却取得了非常好的效果。</p>
-</li>
-<li><p>2013——至今</p>
-<p>现在的模糊测试器众多纷杂，研究者们都进行了很多努力，例如在模糊测试中引入符号执行或者污点分析、引入机器学习等。但是我觉得，这些模糊测试器，并没有超越AFL，AFL依旧是目前最好用、可扩展性最好、稳定性最好的模糊测试器。</p>
-</li>
-</ol>
-<h2 id="0x02-Fuzzing分类"><a href="#0x02-Fuzzing分类" class="headerlink" title="0x02 Fuzzing分类"></a>0x02 Fuzzing分类</h2><p>Fuzzing的分类方式有多种，第一种分类方式是根据对目标程序内部结构的了解程度进行分类；第二种是根据生成测试用例的方式进行分类。</p>
-<h3 id="基于对目标程序内部结构的认知程度进行分类"><a href="#基于对目标程序内部结构的认知程度进行分类" class="headerlink" title="基于对目标程序内部结构的认知程度进行分类"></a>基于对目标程序内部结构的认知程度进行分类</h3><p>根据对目标程序内部的认知程度，fuzzing可以被划分为三类：黑盒模糊测试、白盒模糊测试和灰盒模糊测试。</p>
-<ol>
-<li><p>Black-box fuzzing，黑盒模糊测试</p>
-<p>黑盒模糊测试将目标程序当成一个黑盒子，模糊测试器无需获取目标程序内部的任何信息，因此也不需要目标程序的源码。黑盒模糊测试器只是将测试用例喂给目标程序，然后观察目标程序是否产生了非预期行为（例如，崩溃、挂起等）。黑盒模糊测试执行速度快，但是效率偏低。</p>
-</li>
-<li><p>White-box fuzzing，白盒模糊测试</p>
-<p>白盒模糊测试需要对目标程序内部结构有高度的认知，并且需要获取目标程序的源码。白盒模糊测试利用程序分析（例如构建control-flow graph，即控制流图)增加目标程序的代码覆盖率，或者到达目标程序的某些关键位置。白盒模糊测试器需要对目标程序进行比较细致的分析，生成的测试用例能够较为容易地通过分支处的条件约束，从而能够对目标程序进行更深入的测试，但是它生成新测试用例的速度比较慢。总地来说，白盒模糊测试效率较高，但是执行速度慢。</p>
-</li>
-<li><p>Grey-box fuzzing，灰盒模糊测试</p>
-<p>灰盒模糊测试通常需要获得目标程序的源码，灰盒模糊测试器首先对目标程序进行插桩，然后在目标程序运行时通过插入的桩代码获取目标程序内部的一些信息（例如代码覆盖信息），最后根据运行时的反馈信息生成新的测试用例。灰盒模糊测试兼具白盒模糊测试和黑盒模糊测试的优点，在执行速度和测试效率方面达到了较好的平衡，而且实践证明，灰盒模糊测试确实非常优秀。</p>
-<p>值得注意的是，现在的灰盒模糊测试大多都是基于覆盖率反馈的模糊测试，针对此类模糊测试，也存在一些反模糊测试手段，后文会提到。</p>
-</li>
-</ol>
-<h3 id="基于生成测试用例的方式进行分类"><a href="#基于生成测试用例的方式进行分类" class="headerlink" title="基于生成测试用例的方式进行分类"></a>基于生成测试用例的方式进行分类</h3><p>根据生成测试用例的方式，可以将模糊测试划分为基于突变的模糊测试、基于生成的模糊测试。</p>
-<ol>
-<li><p>Mutation-based fuzzing，基于突变的模糊测试</p>
-<p>基于突变的模糊测试单纯地将测试用例看成一个二进制流，然后在此基础上对测试用例进行突变（例如位翻转、替换、删除、插入等操作），进而生成新的测试用例。在突变过程中，不会考虑目标程序输入的结构、语法等因素。</p>
-<p>基于突变的模糊测试能够快速地生成大量的新测试用例，并且可用性、可扩展性和可移植性都很高，例如<a target="_blank" rel="noopener" href="https://lcamtuf.coredump.cx/afl/">AFL</a>和基于AFL的大部分fuzzer都是基于突变的模糊测试。</p>
-<p>基于突变的模糊测试也有很明显的缺点，无法高效地生成符合要求的输入，生成的大部分测试用例都是不合法的，难以对目标程序进行深入的测试。例如，在测试readelf的时候，输入是ELF文件，如果一个测试用例的魔数字节是非法的，那么readelf在一开始就会转入到相应的错误处理函数，根本测不到readelf的其他功能。</p>
-</li>
-<li><p>Generation-based fuzzing，基于生成的模糊测试</p>
-<p>基于生成的模糊测试在生成新测试用例的时候，会考虑目标程序输入的文件结构、语法等因素，例如基于抽象语法树生成新的测试用例，<a target="_blank" rel="noopener" href="https://github.com/zhunki/Superion">Superion</a>就是一个利用语法树生成测试用例的例子。</p>
-<p>基于生成的模糊测试能够比较容易地生成合法的测试用例，但是其可用性、可扩展性和可移植性都相对较低。我个人觉得，基于生成的模糊测试比较适合单一地测试某种类型的软件。</p>
-</li>
-<li><p>Hybrid fuzzing，混合模糊测试</p>
-<p>随着模糊测试的发展，研究者发现纯模糊测试在生成测试用例方面有一定的局限性，因此开始将符号执行和污点分析等技术与模糊测试技术相结合，统称为混合模糊测试。混合模糊测试的工作模式通常是利用模糊测试生成新的测试用例，当遇到比较困难的约束条件时，利用其他技术求解路径约束，生成满足约束条件的测试用例，然后再将控制转移给模糊测试。<a target="_blank" rel="noopener" href="https://www.usenix.org/conference/usenixsecurity18/presentation/yun">QSYM</a>就是一篇关于混合模糊测试的论文。</p>
-</li>
-</ol>
-<h2 id="0x03-anti-fuzzing"><a href="#0x03-anti-fuzzing" class="headerlink" title="0x03 anti-fuzzing"></a>0x03 anti-fuzzing</h2><p>模糊测试的发展大幅度提高了漏洞挖掘的效率，对维护软件安全有重要意义。但是，模糊测试也可以被恶意攻击者利用，去恶意地挖掘软件漏洞，这对软件安全也带来了一定的威胁。从软件开发者的角度来看，反模糊测试十分必要。这部分的内容基本都是来自于论文：<a target="_blank" rel="noopener" href="https://www.usenix.org/conference/usenixsecurity19/presentation/jung">Fuzzification: Anti-Fuzzing Techniques</a></p>
-<h3 id="在冷门路径内注入无关代码"><a href="#在冷门路径内注入无关代码" class="headerlink" title="在冷门路径内注入无关代码"></a>在冷门路径内注入无关代码</h3><p>模糊测试的主要思路是：利用目标程序的覆盖率反馈信息指导新测试用例的生成。如果能够提供“错误”的覆盖率反馈信息，那么就能使得fuzzer在错误的方向上生成测试用例。</p>
-<p>什么是cold paths（冷门路径）？冷门路径指的是很少被正常的测试用例执行的路径，例如error-handling（错误处理函数），错误处理函数的执行结果一般都是打印出错误信息，然后退出目标程序，并不会涉及到程序的功能。</p>
-<p>首先，我们可以在错误处理函数里面注入一系列的条件分支或者说路径，当一个测试用例触发了这些分支时，fuzzer就会认为该测试用引起了新的代码覆盖，因此会保留该测试用例，用于下一轮的突变。最终的结果就是，fuzzer生成了很多测试用例用于执行这些注入的假路径，减少了目标程序核心代码被测试的概率。其次，我们还可以在其中注入一些sleep等延迟函数，降低测试效率。</p>
+        <p>AFL是目前最著名的fuzzer，本文主要简要介绍AFL的工作流程和实现原理。</p>
+<h2 id="0x00-AFL的工作流程"><a href="#0x00-AFL的工作流程" class="headerlink" title="0x00 AFL的工作流程"></a>0x00 AFL的工作流程</h2><p>AFL既可以测试开源软件，也可以借助qemu测试闭源软件，这里主要讨论测试开源软件的情况。</p>
+<p>在测试开源软件时，AFL的输入包括两部分：目标程序源码和初始的测试用例（也叫initial seeds）；AFL的工作流程主要分为两部分：编译时插桩和正式的fuzzing过程。</p>
+<h3 id="编译时插桩和共享内存"><a href="#编译时插桩和共享内存" class="headerlink" title="编译时插桩和共享内存"></a>编译时插桩和共享内存</h3><p>在获得目标程序源码后，用户首先需要利用AFL提供的编译器afl-gcc对目标程序进行编译，并在汇编层面对目标程序进行插桩，得到一个插桩后的二进制文件，之后fuzzing过程中执行的将会是这个插桩后的二进制文件。</p>
+<p>编译时插入的桩代码将会在fuzzing过程中为fuzzer提供目标程序的代码覆盖信息，具体地说，是边覆盖信息。首先，桩代码会为目标程序的每一个<a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Basic_block">基本块</a>都随机分配一个id，并根据此计算每条边的id。假设基本块A的id为ID_A，基本块B的id为ID_B，那么A-&gt;B这条边的id为<font color=red>(ID_A &gt;&gt; 1)xor ID_B</font>，我们记为edge(A, B)，很明显edge(A, B)和edge(B, A)是不一样的，通过这种方式，AFL就能<font color=red>唯一地</font>标识目标程序中的每一条边。其次，桩代码还会统计每一条边的执行次数，并将其保存在<font color=red>共享内存shared_map</font>中。</p>
+<p>shared_map能够提供一个测试用例对于目标程序的边覆盖信息。在一个测试用例被执行前，shared_map会被重置；在执行该测试用例的过程中shared_map会被更新；当该测试用例执行完毕后，就会得到这个测试用例对应的shared_map。因此，shared_map能够表示目标程序执行某个测试用例后的边覆盖情况。</p>
+<p>关于AFL的代码覆盖统计，可能会有这样的疑问🤔️：为什么不记录完整的路径执行信息呢？我觉得是代价太高了，尤其是在有大量循环的时候，每增加一次循环都表示一条新的路径。论文<a target="_blank" rel="noopener" href="https://www.usenix.org/conference/raid2019/presentation/wang">Be Sensitive and Collaborative: Analyzing Impact of Coverage Metrics in Greybox Fuzzing</a>对不同代码覆盖率统计方式对于fuzzing的影响进行了研究。</p>
+<h3 id="Fuzzing过程"><a href="#Fuzzing过程" class="headerlink" title="Fuzzing过程"></a>Fuzzing过程</h3><p>AFL（1）首先使用用户提供的初始的测试用例初始化seed pool（种子池），（2）随后采用一定的seed selection strategy（种子选择策略）从种子池中选取一个测试用例，（3）紧接着，使用一定的mutation strategy（突变策略）突变选中的测试用例，进而生成一系列新的测试用例，（4）然后依次执行生成的新测试用例，（5）监视目标程序的执行。如果某个测试用例导致目标程序发生异常，那么将其加入crash set；否则根据shared_map判断测试用例是否引起新的代码覆盖，如果有，则认为该测试用例是“interesting”的，并将其加入seed pool，如果没有，则丢弃该测试用例，（6）返回（2）。注意，AFL不会自动停止fuzzing过程，需要用户手动停止。（注意，这个过程并不是百分之百和AFL的执行流程相同，例如AFL的一系列预处理过程这里都没有提及，这里只是整体介绍AFL的工作流程。此外，这个流程也适用于当下大部分的灰盒模糊测试）</p>
+<p>种子选择策略：它决定着在种子池中，选择哪个测试用例去突变。例如，选取长度小、执行时间短的测试用例进行突变。</p>
+<p>种子突变策略：它决定着种子的突变位置和具体的突变操作。例如AFL包含两个突变阶段：deterministic stage和havoc stage。</p>
+<p>种子的energy：它表示该种子生成的新测试用例的数目。</p>
+<p>interesting：如果一个测试用例使得目标程序的代码覆盖情况发生了变化（例如，该测试用例执行了一条新的边），则认为该测试用例是interesting的。</p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="https://lxumei.github.io/2021/04/27/AFL%E5%89%96%E6%9E%90%EF%BC%88%E4%B8%80%EF%BC%89/" data-id="cko188sik0000bgfq2y7rhg61" data-title="Fuzzing概述" class="article-share-link">Share</a>
+      <a data-url="https://lxumei.github.io/2021/04/28/AFL%E6%A6%82%E8%BF%B0/" data-id="cko285p2n0000effqd6ny7e5x" data-title="AFL概述" class="article-share-link">Share</a>
       
       
       
@@ -292,7 +247,7 @@
       <ul>
         
           <li>
-            <a href="/2021/04/27/AFL%E5%89%96%E6%9E%90%EF%BC%88%E4%B8%80%EF%BC%89/">Fuzzing概述</a>
+            <a href="/2021/04/28/AFL%E6%A6%82%E8%BF%B0/">AFL概述</a>
           </li>
         
           <li>
