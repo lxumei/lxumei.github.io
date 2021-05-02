@@ -14,7 +14,7 @@
 <meta property="og:description" content="本文主要简要介绍AFL的工作流程和实现原理。AFL是一个典型的coverage-based grey box fuzzer，对fuzzing的发展具有十分重大的意义。不过，在本文正式开始之前，我们首先来看一下什么是coverage-based？ coverage-based，有的论文也称coverage-guided，coverage-based fuzzing通过扩大目标程序程序的代码覆盖率增加">
 <meta property="og:locale" content="en_US">
 <meta property="article:published_time" content="2021-04-28T09:01:28.820Z">
-<meta property="article:modified_time" content="2021-05-01T09:20:10.482Z">
+<meta property="article:modified_time" content="2021-05-02T11:58:43.375Z">
 <meta property="article:author" content="John Doe">
 <meta name="twitter:card" content="summary">
   
@@ -108,7 +108,7 @@
 <h2 id="0x02-Forkserver机制"><a href="#0x02-Forkserver机制" class="headerlink" title="0x02 Forkserver机制"></a>0x02 Forkserver机制</h2><p>AFL设计了一套forkserver机制使，可以避免频繁调用execve()，大幅度降低了fuzzing的时间开销。AFL的作者也有一篇博客专门记录了此事，详见链接：<a target="_blank" rel="noopener" href="https://lcamtuf.blogspot.com/2014/10/fuzzing-binaries-without-execve.html">https://lcamtuf.blogspot.com/2014/10/fuzzing-binaries-without-execve.html</a></p>
 <p>Fuzzer的一个重要任务是：将生成的每一个测试用例依次喂给目标程序执行，因此目标程序需要被执行很多次。一个简单的思路是将fuzzer进程作为父进程，当执行一个测试用例时，fuzzer进程首先创建一个子进程，在子进程内使用execve()执行目标程序，fuzzer进程通过waitpid()获取子进程的执行信息，判断子进程是否因为signal（例如，SIGSEGV, SIGABRT等）结束。</p>
 <p>不幸的是， 频繁地执行execve()会引起很大的时间开销：每一次执行execve()时，都需要将目标程序加载到内存，进行链接等操作，十分低效。🤔️ 那能不能只加载一次目标程序，只进行一次链接等操作呢？😄 答案是：可以的，相关的实现机制是forkserver。接下来，本文简要说明一下forkserver的基本思路，不涉及具体的代码。</p>
-<h3 id="编译时插桩"><a href="#编译时插桩" class="headerlink" title="编译时插桩"></a>编译时插桩</h3><p>AFL通过编译时插桩，在目标程序中插入了一段代码（注意：插入的位置必须是在测试用例被目标程序使用之前，例如，main()函数之前），这段代码的作用是按照fuzzer进程的指令行事。当fuzzer进程说“执行”，这段代码就调用fork()创建一个子进程（即，target进程），在target进程内，注入的代码会将控制权限交给目标程序本身，目标程序就能从main()开始执行；而父进程内会等待 target进程，并将target进程的进程ID通过管道发送给fuzzer进程。</p>
+<h3 id="编译时插桩"><a href="#编译时插桩" class="headerlink" title="编译时插桩"></a>编译时插桩</h3><p>AFL通过编译时插桩，在目标程序中插入了一段代码，这段代码的作用是按照fuzzer进程的指令行事。当fuzzer进程说“执行”，这段代码就调用fork()创建一个子进程（即，target进程），在target进程内，注入的代码会将控制权限交给目标程序本身，目标程序就能真正开始执行；而父进程内会等待 target进程，并将target进程的进程ID通过管道发送给fuzzer进程。</p>
 <p>fork()这里利用到了<a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/628938/what-is-copy-on-write">copy-on-write</a>机制，得到的子进程和父进程在一开始是共享内存空间，直到子进程进行了写操作。利用copy-on-write机制的fork()十分高效。</p>
 <h3 id="进程之间的通信"><a href="#进程之间的通信" class="headerlink" title="进程之间的通信"></a>进程之间的通信</h3><p>AFL一共涉及到三个进程：AFL进程，forkserver进程和target进程。这三个进程之间的关系是：AFL进程创建了forkserver进程，forkserver进程创建了target进程。</p>
 <p>在fuzzing中，AFL进程会首先启动一个forkserver进程。forkserver进程的作用是：将插桩后的目标程序通过execve()加载到内存中并执行。因为插入的桩代码，目标程序并不会被立刻执行，而是阻塞等待AFL进程的命令。当AFL进程发送命令说“执行”，forkserver进程就会通过fork()创建一个target进程，并开始真正地执行目标程序；而forkserver进程会将target进程的进程ID发给AFL进程，然后等待target进程结束。</p>
