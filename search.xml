@@ -23,9 +23,9 @@
 ]]></content>
   </entry>
   <entry>
-    <title>AFL:Compile-time Instrumentation</title>
-    <url>/2021/05/05/AFL%EF%BC%9ACompile-time-instrumentation/</url>
-    <content><![CDATA[<p>这篇文章主要从源码角度剖析AFL的编译时插桩。AFL的编译时插桩主要有以下几个目的：实现forkserver，使execve()只需要调用一次；设置共享内存，使得AFL进程可以和target进程共享边覆盖信息；动态反馈目标程序的边覆盖信息。本文将从源码角度对以上部分的实现进行解析。<span id="more"></span></p>
+    <title>AFL编译时插桩</title>
+    <url>/2021/05/05/AFL%E7%BC%96%E8%AF%91%E6%97%B6%E6%8F%92%E6%A1%A9/</url>
+    <content><![CDATA[<p>这篇文章主要从源码角度剖析AFL的编译时插桩（compile-time-instrumentation）。AFL的编译时插桩主要有以下几个目的：实现forkserver，使execve()只需要调用一次；设置共享内存，使得AFL进程可以和target进程共享边覆盖信息；动态反馈目标程序的边覆盖信息。本文将从源码角度对以上部分的实现进行解析。<span id="more"></span></p>
 <h2 id="插桩"><a href="#插桩" class="headerlink" title="插桩"></a>插桩</h2><p>afl-as.c是真正对目标程序进行插桩的文件，其基本思想是，遍历目标程序对应的汇编文件的每一行代码，然后判断其是不是一个基本块的开始，如果是的话，就在这行代码之前进行插桩，以32位为例子，会插入如下的代码：</p>
 <figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">static const u8* trampoline_fmt_32 &#x3D;</span><br><span class="line"></span><br><span class="line">  &quot;\n&quot;</span><br><span class="line">  &quot;&#x2F;* --- AFL TRAMPOLINE (32-BIT) --- *&#x2F;\n&quot;</span><br><span class="line">  &quot;\n&quot;</span><br><span class="line">  &quot;.align 4\n&quot;</span><br><span class="line">  &quot;\n&quot;</span><br><span class="line">  &quot;leal -16(%%esp), %%esp\n&quot;</span><br><span class="line">  &quot;movl %%edi, 0(%%esp)\n&quot;</span><br><span class="line">  &quot;movl %%edx, 4(%%esp)\n&quot;</span><br><span class="line">  &quot;movl %%ecx, 8(%%esp)\n&quot;</span><br><span class="line">  &quot;movl %%eax, 12(%%esp)\n&quot;</span><br><span class="line">  &quot;movl $0x%08x, %%ecx\n&quot;</span><br><span class="line">  &quot;call __afl_maybe_log\n&quot;</span><br><span class="line">  &quot;movl 12(%%esp), %%eax\n&quot;</span><br><span class="line">  &quot;movl 8(%%esp), %%ecx\n&quot;</span><br><span class="line">  &quot;movl 4(%%esp), %%edx\n&quot;</span><br><span class="line">  &quot;movl 0(%%esp), %%edi\n&quot;</span><br><span class="line">  &quot;leal 16(%%esp), %%esp\n&quot;</span><br><span class="line">  &quot;\n&quot;</span><br><span class="line">  &quot;&#x2F;* --- END --- *&#x2F;\n&quot;</span><br><span class="line">  &quot;\n&quot;;</span><br></pre></td></tr></table></figure>
 <p>这段的代码的主要作用是：</p>

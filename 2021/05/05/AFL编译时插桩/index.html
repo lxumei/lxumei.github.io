@@ -20,21 +20,21 @@
     var CONFIG = {"hostname":"lxumei.github.io","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
   </script>
 
-  <meta name="description" content="这篇文章主要从源码角度剖析AFL的编译时插桩。AFL的编译时插桩主要有以下几个目的：实现forkserver，使execve()只需要调用一次；设置共享内存，使得AFL进程可以和target进程共享边覆盖信息；动态反馈目标程序的边覆盖信息。本文将从源码角度对以上部分的实现进行解析。">
+  <meta name="description" content="这篇文章主要从源码角度剖析AFL的编译时插桩（compile-time-instrumentation）。AFL的编译时插桩主要有以下几个目的：实现forkserver，使execve()只需要调用一次；设置共享内存，使得AFL进程可以和target进程共享边覆盖信息；动态反馈目标程序的边覆盖信息。本文将从源码角度对以上部分的实现进行解析。">
 <meta property="og:type" content="article">
-<meta property="og:title" content="AFL:Compile-time Instrumentation">
-<meta property="og:url" content="https://lxumei.github.io/2021/05/05/AFL%EF%BC%9ACompile-time-instrumentation/index.html">
+<meta property="og:title" content="AFL编译时插桩">
+<meta property="og:url" content="https://lxumei.github.io/2021/05/05/AFL%E7%BC%96%E8%AF%91%E6%97%B6%E6%8F%92%E6%A1%A9/index.html">
 <meta property="og:site_name" content="Lxumei&#39;s Blog">
-<meta property="og:description" content="这篇文章主要从源码角度剖析AFL的编译时插桩。AFL的编译时插桩主要有以下几个目的：实现forkserver，使execve()只需要调用一次；设置共享内存，使得AFL进程可以和target进程共享边覆盖信息；动态反馈目标程序的边覆盖信息。本文将从源码角度对以上部分的实现进行解析。">
+<meta property="og:description" content="这篇文章主要从源码角度剖析AFL的编译时插桩（compile-time-instrumentation）。AFL的编译时插桩主要有以下几个目的：实现forkserver，使execve()只需要调用一次；设置共享内存，使得AFL进程可以和target进程共享边覆盖信息；动态反馈目标程序的边覆盖信息。本文将从源码角度对以上部分的实现进行解析。">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="https://lxumei.github.io/images/image-20210504232350375.png">
 <meta property="article:published_time" content="2021-05-05T03:05:25.060Z">
-<meta property="article:modified_time" content="2021-05-05T03:05:25.060Z">
+<meta property="article:modified_time" content="2021-05-05T03:12:28.317Z">
 <meta property="article:author" content="Lxumei">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:image" content="https://lxumei.github.io/images/image-20210504232350375.png">
 
-<link rel="canonical" href="https://lxumei.github.io/2021/05/05/AFL%EF%BC%9ACompile-time-instrumentation/">
+<link rel="canonical" href="https://lxumei.github.io/2021/05/05/AFL%E7%BC%96%E8%AF%91%E6%97%B6%E6%8F%92%E6%A1%A9/">
 
 
 <script id="page-configurations">
@@ -47,7 +47,7 @@
   };
 </script>
 
-  <title>AFL:Compile-time Instrumentation | Lxumei's Blog</title>
+  <title>AFL编译时插桩 | Lxumei's Blog</title>
   
 
 
@@ -180,7 +180,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://lxumei.github.io/2021/05/05/AFL%EF%BC%9ACompile-time-instrumentation/">
+    <link itemprop="mainEntityOfPage" href="https://lxumei.github.io/2021/05/05/AFL%E7%BC%96%E8%AF%91%E6%97%B6%E6%8F%92%E6%A1%A9/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -193,7 +193,7 @@
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          AFL:Compile-time Instrumentation
+          AFL编译时插桩
         </h1>
 
         <div class="post-meta">
@@ -202,8 +202,9 @@
                 <i class="far fa-calendar"></i>
               </span>
               <span class="post-meta-item-text">发表于</span>
+              
 
-              <time title="创建时间：2021-05-05 11:05:25" itemprop="dateCreated datePublished" datetime="2021-05-05T11:05:25+08:00">2021-05-05</time>
+              <time title="创建时间：2021-05-05 11:05:25 / 修改时间：11:12:28" itemprop="dateCreated datePublished" datetime="2021-05-05T11:05:25+08:00">2021-05-05</time>
             </span>
 
           
@@ -217,7 +218,7 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <p>这篇文章主要从源码角度剖析AFL的编译时插桩。AFL的编译时插桩主要有以下几个目的：实现forkserver，使execve()只需要调用一次；设置共享内存，使得AFL进程可以和target进程共享边覆盖信息；动态反馈目标程序的边覆盖信息。本文将从源码角度对以上部分的实现进行解析。<span id="more"></span></p>
+        <p>这篇文章主要从源码角度剖析AFL的编译时插桩（compile-time-instrumentation）。AFL的编译时插桩主要有以下几个目的：实现forkserver，使execve()只需要调用一次；设置共享内存，使得AFL进程可以和target进程共享边覆盖信息；动态反馈目标程序的边覆盖信息。本文将从源码角度对以上部分的实现进行解析。<span id="more"></span></p>
 <h2 id="插桩"><a href="#插桩" class="headerlink" title="插桩"></a>插桩</h2><p>afl-as.c是真正对目标程序进行插桩的文件，其基本思想是，遍历目标程序对应的汇编文件的每一行代码，然后判断其是不是一个基本块的开始，如果是的话，就在这行代码之前进行插桩，以32位为例子，会插入如下的代码：</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">static const u8* trampoline_fmt_32 &#x3D;</span><br><span class="line"></span><br><span class="line">  &quot;\n&quot;</span><br><span class="line">  &quot;&#x2F;* --- AFL TRAMPOLINE (32-BIT) --- *&#x2F;\n&quot;</span><br><span class="line">  &quot;\n&quot;</span><br><span class="line">  &quot;.align 4\n&quot;</span><br><span class="line">  &quot;\n&quot;</span><br><span class="line">  &quot;leal -16(%%esp), %%esp\n&quot;</span><br><span class="line">  &quot;movl %%edi, 0(%%esp)\n&quot;</span><br><span class="line">  &quot;movl %%edx, 4(%%esp)\n&quot;</span><br><span class="line">  &quot;movl %%ecx, 8(%%esp)\n&quot;</span><br><span class="line">  &quot;movl %%eax, 12(%%esp)\n&quot;</span><br><span class="line">  &quot;movl $0x%08x, %%ecx\n&quot;</span><br><span class="line">  &quot;call __afl_maybe_log\n&quot;</span><br><span class="line">  &quot;movl 12(%%esp), %%eax\n&quot;</span><br><span class="line">  &quot;movl 8(%%esp), %%ecx\n&quot;</span><br><span class="line">  &quot;movl 4(%%esp), %%edx\n&quot;</span><br><span class="line">  &quot;movl 0(%%esp), %%edi\n&quot;</span><br><span class="line">  &quot;leal 16(%%esp), %%esp\n&quot;</span><br><span class="line">  &quot;\n&quot;</span><br><span class="line">  &quot;&#x2F;* --- END --- *&#x2F;\n&quot;</span><br><span class="line">  &quot;\n&quot;;</span><br></pre></td></tr></table></figure>
 <p>这段的代码的主要作用是：</p>
