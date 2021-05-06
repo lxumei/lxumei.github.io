@@ -173,73 +173,6 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="https://lxumei.github.io/2021/05/05/AFL%E7%BC%96%E8%AF%91%E6%97%B6%E6%8F%92%E6%A1%A9/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Lxumei">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Lxumei's Blog">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/05/05/AFL%E7%BC%96%E8%AF%91%E6%97%B6%E6%8F%92%E6%A1%A9/" class="post-title-link" itemprop="url">AFL编译时插桩</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              
-
-              <time title="创建时间：2021-05-05 11:05:25 / 修改时间：20:29:11" itemprop="dateCreated datePublished" datetime="2021-05-05T11:05:25+08:00">2021-05-05</time>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h2 id="0x00-前言"><a href="#0x00-前言" class="headerlink" title="0x00 前言"></a>0x00 前言</h2><p>这篇文章主要从源码角度剖析AFL的编译时插桩（compile-time instrumentation）。AFL超级棒的一点在于其“灰盒”的特性：通过编译时插桩获动态获取目标程序的边覆盖信息。此外，AFL的forkserver机制使得AFL在运行过程中只需调用一次execv()函数，避免了多次调用execv()引起的开销（注：每执行一次execv()，都需要将目标程序加载到内存，进行链接等操作）。</p>
-<p>注意：本文只分析能获得目标程序源码、开启forkserver下的AFL的一些内部实现，主要以afl-gcc为例对插桩代码进行解读，涉及到的源文件主要有afl-fuzz.c，afl-as.c，afl-as.h 和 afl-gcc.c。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2021/05/05/AFL%E7%BC%96%E8%AF%91%E6%97%B6%E6%8F%92%E6%A1%A9/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
     <link itemprop="mainEntityOfPage" href="https://lxumei.github.io/2021/04/28/AFL%E6%A6%82%E8%BF%B0/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -446,7 +379,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">3</span>
+          <span class="site-state-item-count">2</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
